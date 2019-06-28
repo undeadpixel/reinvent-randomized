@@ -1,57 +1,69 @@
-Implementation of the RNN model used in "Exploring the GDB-13 chemical space using deep generative models"
-======================================================================================================
+Implementation of the molecular generative model used in "Randomized SMILES strings improve the quality of molecular generative models"
+=======================================================================================================================================
 
-This code allows to create, train and sample RNN with the architecture described in [Exploring the GDB-13 Chemical Space Using Deep Generative Models](https://chemrxiv.org/articles/Exploring_the_GDB-13_Chemical_Space_Using_Deep_Generative_Models/7172849).
+This repository holds the code to create, train and sample models akin to those described in [Randomized SMILES strings improve the quality of molecular generative models](). Specifically, it includes the following:
 
-Also find an already trained model with a 1M random sample of GDB-13 in the `trained_models` folder.
+* Python files in the main folder: Scripts to create, train, sample and calculate NLLs of models.
+* `./training_sets`: Training sets (in canonical SMILES) used in the benchmark.
+* `./trained_models`: Best trained models in the benchmark.
+
+Requirements
+------------
+
+This software has been tested on Linux with Tesla V-100 GPUs. We think it should work with other linux-based setups quite easily. 
+The create randomized SMILES script uses Spark 2.4 to parallelize the creation of SMILES. By default it should run in local mode, but maybe further configuration is needed.
 
 Install
 -------
 A [Conda](https://conda.io/miniconda.html) `environment.yml` is supplied with all the required libraries.
 
 ~~~~
+$> git clone <repo url>
+$> cd <repo folder>
 $> conda env create -f environment.yml
-$> source activate reinvent-gdb13
-(reinvent-gdb13) $> ./create_model.py -h
-usage: create_model.py [-h] --input-smiles-path INPUT_SMILES_PATH
-                       --output-model-path OUTPUT_MODEL_PATH
-                       [--num-gru-layers NUM_GRU_LAYERS]
-                       [--gru-layer-size GRU_LAYER_SIZE]
-                       [--embedding-layer-size EMBEDDING_LAYER_SIZE]
-
-Create a model with the vocabulary extracted from a SMILES file.
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --input-smiles-path INPUT_SMILES_PATH, -i INPUT_SMILES_PATH
-                        SMILES to calculate the vocabulary from. The SMILES
-                        are taken as-is, no processing is done.
-  --output-model-path OUTPUT_MODEL_PATH, -o OUTPUT_MODEL_PATH
-                        Prefix to the output model.
-  --num-gru-layers NUM_GRU_LAYERS, -n NUM_GRU_LAYERS
-                        Number of GRU layers of the model [DEFAULT: 3]
-  --gru-layer-size GRU_LAYER_SIZE, -s GRU_LAYER_SIZE
-                        Size of each of the GRU layers [DEFAULT: 512]
-  --embedding-layer-size EMBEDDING_LAYER_SIZE, -e EMBEDDING_LAYER_SIZE
-                        Size of the embedding layer [DEFAULT: 256]
+$> conda activate reinvent-randomized
+(reinvent-randomized) $> ...
 ~~~~
+
+From here the general usage applies.
 
 General Usage
 -------------
-Three tools are supplied. By default the parameters are set to match those used in the publication. To get further information about the tool, please run the help implemented in each of them, or look at the example below.
+Four tools are supplied. Further information about the tool's arguments, please run it with `-h`. All output files are in tsv format (the separator is \t).
 
 1) Create Model (`create_model.py`): Creates a blank model file.
 2) Train Model (`train_model.py`): Trains the model with the specified parameters.
-3) Sample Model (`sample_from_model.py`): Samples an already trained model for a given number of SMILES. It can also retrieve the log-likelihood in the process.
+3) Sample Model (`sample_from_model.py`): Samples an already trained model for a given number of SMILES. It also retrieves the log-likelihood in the process.
+4) Calculate NLL (`calculate_nlls.py`): Requires as input a SMILES list and outputs a SMILES list with the NLL calculated for each one. It's recommended not to use files with more than 20-30 million SMILES.
+5) Create random SMILES (`create_randomized_smiles.py`): From a list of canonical SMILES it creates a given number of randomized SMILES files and stores them in the folder specified as output with filenames 000.smi, 001.smi, etc.
 
 Usage examples
 --------------
 
-Create, train and sample a model as in the publication.
+Create, train 100 epochs with adaptative learning rate and sample a model with the ChEMBL dataset (randomized SMILES).
 ~~~~
-(reinvent-gdb13) $> mkdir gdb13_models
-(reinvent-gdb13) $> ./create_model.py -i training_set.smi -o gdb13.1M.model.empty
-(reinvent-gdb13) $> ./train_model.py -i gdb.13.1M.model.empty -o gdb13_models/model -s training_set.smi --num-epochs=200 --lrcs=0.9772 --save-every-n-epochs=1
-# (... wait 24-48h ...)
-(reinvent-gdb13) $> ./sample_from_model.py gdb13_models/model.70 -n 1000000 --with-likelihood -o sample.smi
+(reinvent-randomized) $> mkdir -p chembl_randomized/models
+(reinvent-randomized) $> ./create_randomized_smiles.py -i trained_models/chembl.training.smi -o chembl_randomized/training -n 100
+(reinvent-randomized) $> ./create_randomized_smiles.py -i trained_models/chembl.validation.smi -o chembl_randomized/validation -n 100
+(reinvent-randomized) $> ./create_model.py -i chembl_randomized/training/001.smi -o chembl_randomized/models/model.empty
+(reinvent-randomized) $> ./train_model.py -i chembl_randomized/models/model.empty -o chembl_randomized/models/model.trained -s chembl_randomized/training -e 100 --lrm ada --csl chembl_randomized/tensorboard --csv chembl_randomized/validation --csn 75000
+# (... wait a few days ...)
+(reinvent-randomized) $> ./sample_from_model.py chembl_randomized/models/model.trained.100 --with-likelihood
 ~~~~
+
+**CAUTION:** When creating random SMILES sets, the SMILES representation changes and so some of the infrequent tokens do not appear in some sets. To solve that you can try different subsets until you find one that has all the tokens or you can create a fake one with all tokens.
+
+Create, train 100 epochs with exponential learning rate and sample a model with 1M molecules from the GDB-13 database (canonical SMILES).
+~~~~
+(reinvent-randomized) $> mkdir -p gdb13_exp/models
+(reinvent-randomized) $> ./create_model.py -i trained_models/gdb13.1M.training.smi -o gdb13_exp/models/model.empty
+(reinvent-randomized) $> ./train_model.py -i gdb13_exp/models/model.empty -o gdb13_exp/models/model.trained -s trained_models/gdb13.1M.training.smi -e 100 --lrm exp --lrg 0.9 --csl gdb13_exp/tensorboard --csv trained_models/gdb13.1M.validation.smi --csn 10000
+# (... wait for a day or so ...)
+(reinvent-randomized) $> ./sample_from_model.py gdb13_exp/models/model.trained.100 --with-likelihood
+~~~~
+
+Bugs, Errors, Improvements, etc...
+----------------------------------
+
+We have tested the software, but if you find any bug (which there probably are some) don't hesitate to contact us, or even better, send a pull request or open a github issue. If you have any other question, you can contact us at josep.arus@dcb.unibe.ch and we will be happy to answer you :).
+
