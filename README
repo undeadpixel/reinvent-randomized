@@ -43,8 +43,8 @@ Usage examples
 Create, train 100 epochs with adaptative learning rate and sample a model with the ChEMBL dataset (randomized SMILES).
 ~~~~
 (reinvent-randomized) $> mkdir -p chembl_randomized/models
-(reinvent-randomized) $> ./create_randomized_smiles.py -i trained_models/chembl.training.smi -o chembl_randomized/training -n 100
-(reinvent-randomized) $> ./create_randomized_smiles.py -i trained_models/chembl.validation.smi -o chembl_randomized/validation -n 100
+(reinvent-randomized) $> ./create_randomized_smiles.py -i training_sets/chembl.training.smi -o chembl_randomized/training -n 100
+(reinvent-randomized) $> ./create_randomized_smiles.py -i training_sets/chembl.validation.smi -o chembl_randomized/validation -n 100
 (reinvent-randomized) $> ./create_model.py -i chembl_randomized/training/001.smi -o chembl_randomized/models/model.empty
 (reinvent-randomized) $> ./train_model.py -i chembl_randomized/models/model.empty -o chembl_randomized/models/model.trained -s chembl_randomized/training -e 100 --lrm ada --csl chembl_randomized/tensorboard --csv chembl_randomized/validation --csn 75000
 # (... wait a few days ...)
@@ -53,11 +53,17 @@ Create, train 100 epochs with adaptative learning rate and sample a model with t
 
 **CAUTION:** When creating random SMILES sets, the SMILES representation changes and so some of the infrequent tokens do not appear in some sets. To solve that you can try different subsets until you find one that has all the tokens or you can create a fake one with all tokens.
 
+Notice that the tensorboard data is stored in `chembl_randomized/tensorboard` and can be accessed (even during training) by:
+~~~~
+(reinvent-randomized) $> tensorboard --logdir chembl_randomized/tensorboard --port 9999
+~~~~
+And go to localhost:9999 to access the web interface.
+
 Create, train 100 epochs with exponential learning rate and sample a model with 1M molecules from the GDB-13 database (canonical SMILES).
 ~~~~
 (reinvent-randomized) $> mkdir -p gdb13_exp/models
-(reinvent-randomized) $> ./create_model.py -i trained_models/gdb13.1M.training.smi -o gdb13_exp/models/model.empty
-(reinvent-randomized) $> ./train_model.py -i gdb13_exp/models/model.empty -o gdb13_exp/models/model.trained -s trained_models/gdb13.1M.training.smi -e 100 --lrm exp --lrg 0.9 --csl gdb13_exp/tensorboard --csv trained_models/gdb13.1M.validation.smi --csn 10000
+(reinvent-randomized) $> ./create_model.py -i training_sets/gdb13.1M.training.smi -o gdb13_exp/models/model.empty
+(reinvent-randomized) $> ./train_model.py -i gdb13_exp/models/model.empty -o gdb13_exp/models/model.trained -s training_sets/gdb13.1M.training.smi -e 100 --lrm exp --lrg 0.9 --csl gdb13_exp/tensorboard --csv trained_models/gdb13.1M.validation.smi --csn 10000
 # (... wait for a day or so ...)
 (reinvent-randomized) $> ./sample_from_model.py gdb13_exp/models/model.trained.100 --with-likelihood
 ~~~~
