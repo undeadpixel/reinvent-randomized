@@ -85,19 +85,19 @@ def to_smiles(mol):
     return rkc.MolToSmiles(mol, isomericSmiles=False)
 
 
-def randomize_smiles(mol, random_type="order"):
+def randomize_smiles(mol, random_type="restricted"):
     """
     Returns a random SMILES given a SMILES of a molecule.
     :param mol: A Mol object
-    :param random_type: The type (branching, order) of randomization performed.
+    :param random_type: The type (unrestricted, restricted) of randomization performed.
     :return : A random SMILES string of the same molecule or None if the molecule is invalid.
     """
     if not mol:
         return None
 
-    if random_type == "branching":
+    if random_type == "unrestricted":
         return rkc.MolToSmiles(mol, canonical=False, doRandom=True, isomericSmiles=False)
-    if random_type == "order":
+    if random_type == "restricted":
         new_atom_order = list(range(mol.GetNumHeavyAtoms()))
         random.shuffle(new_atom_order)
         random_mol = rkc.RenumberAtoms(mol, newOrder=new_atom_order)
