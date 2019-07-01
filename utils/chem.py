@@ -46,7 +46,7 @@ def read_csv_file(file_path, ignore_invalid=True, num=-1):
         for i, row in enumerate(csv_file):
             if i == num:
                 break
-            fields = row.rstrip().split(",")
+            fields = row.rstrip().split("\t")
             if fields:
                 yield fields
             elif not ignore_invalid:
