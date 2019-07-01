@@ -89,7 +89,6 @@ class TrainModelPostEpochHook(ma.TrainModelPostEpochHook):
 def main():
     """Main function."""
     params = parse_args()
-    print(params)
     lr_params = params["learning_rate"]
     cs_params = params["collect_stats"]
     params = params["other"]
