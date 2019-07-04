@@ -8,7 +8,6 @@ import re
 import numpy as np
 
 
-# contains the data structure
 class Vocabulary:
     """Stores the tokens and their conversion to one-hot vectors."""
 
