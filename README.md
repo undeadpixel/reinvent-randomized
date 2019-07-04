@@ -7,6 +7,8 @@ This repository holds the code to create, train and sample models akin to those 
 * `./training_sets`: Training sets (in canonical SMILES) used in the benchmark.
 * `./trained_models`: Best trained models in the benchmark.
 
+**Note:** This repository superseeds [undeadpixel/reinvent-gdb13](https://github.com/undeadpixel/reinvent-gdb13).
+
 Requirements
 ------------
 
