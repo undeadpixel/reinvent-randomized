@@ -9,7 +9,6 @@ import argparse
 import os.path
 import glob
 import itertools as it
-import collections
 
 import numpy as np
 
@@ -95,6 +94,10 @@ def main():
 
     ut.set_default_device("cuda")
 
+    if params["collect_stats_frequency"] != 1 and lr_params["mode"] == "ada":
+        LOG.warning("Changed collect-stats-frequency to 1 to work well with adaptative training.")
+        params["collect_stats_frequency"] = 1
+
     model = mm.Model.load_from_file(params["input_model_path"])
     optimizer = torch.optim.Adam(model.network.parameters(), lr=lr_params["start"])
     training_sets = load_sets(params["training_set_path"])
@@ -106,15 +109,12 @@ def main():
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, mode="min", factor=lr_params["gamma"], patience=lr_params["patience"],
             threshold=lr_params["threshold"])
-        if params["collect_stats_frequency"] != 1:
-            LOG.warning("Changed collect-stats-frequency to 1 to work well with adaptative training.")
-            params["collect_stats_frequency"] = 1
     else:
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=lr_params["step"], gamma=lr_params["gamma"])
 
     post_epoch_hook = TrainModelPostEpochHook(
-        params["output_model_prefix_path"], params["epochs"], validation_sets, lr_scheduler, cs_params["log_path"], cs_params,
-        lr_params, collect_stats_frequency=params["collect_stats_frequency"],
+        params["output_model_prefix_path"], params["epochs"], validation_sets, lr_scheduler,
+        cs_params["log_path"], cs_params, lr_params, collect_stats_frequency=params["collect_stats_frequency"],
         save_frequency=params["save_every_n_epochs"], logger=LOG
     )
 
@@ -204,7 +204,7 @@ def _add_base_args(parser):
     parser.add_argument("--clip-gradients",
                         help="Clip gradients to a given norm [DEFAULT: 1.0]", type=float, default=1.0)
     parser.add_argument("--collect-stats-frequency", "--csf",
-                        help="Collect statistics every *n* epochs [DEFAULT: 0]", type=int, default=0)
+                        help="Collect statistics every *n* epochs [DEFAULT: 1]", type=int, default=1)
     parser = csfm.add_stats_args(parser, with_prefix=True, with_required=False)
 
 
