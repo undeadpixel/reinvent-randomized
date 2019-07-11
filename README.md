@@ -50,7 +50,7 @@ Create, train 100 epochs with adaptative learning rate and sample a model with t
 (reinvent-randomized) $> ./create_model.py -i chembl_randomized/training/001.smi -o chembl_randomized/models/model.empty
 (reinvent-randomized) $> ./train_model.py -i chembl_randomized/models/model.empty -o chembl_randomized/models/model.trained -s chembl_randomized/training -e 100 --lrm ada --csl chembl_randomized/tensorboard --csv chembl_randomized/validation --csn 75000
 # (... wait a few days ...)
-(reinvent-randomized) $> ./sample_from_model.py chembl_randomized/models/model.trained.100 --with-likelihood
+(reinvent-randomized) $> ./sample_from_model.py -m chembl_randomized/models/model.trained.100 --with-likelihood
 ~~~~
 
 **CAUTION:** When creating random SMILES sets, the SMILES representation changes and so some of the infrequent tokens do not appear in some sets. To solve that you can try different subsets until you find one that has all the tokens or you can create a fake one with all tokens.
@@ -67,7 +67,7 @@ Create, train 100 epochs with exponential learning rate and sample a model with 
 (reinvent-randomized) $> ./create_model.py -i training_sets/gdb13.1M.training.smi -o gdb13_exp/models/model.empty
 (reinvent-randomized) $> ./train_model.py -i gdb13_exp/models/model.empty -o gdb13_exp/models/model.trained -s training_sets/gdb13.1M.training.smi -e 100 --lrm exp --lrg 0.9 --csl gdb13_exp/tensorboard --csv trained_models/gdb13.1M.validation.smi --csn 10000
 # (... wait for a day or so ...)
-(reinvent-randomized) $> ./sample_from_model.py gdb13_exp/models/model.trained.100 --with-likelihood
+(reinvent-randomized) $> ./sample_from_model.py -m gdb13_exp/models/model.trained.100 --with-likelihood
 ~~~~
 
 Bugs, Errors, Improvements, etc...
