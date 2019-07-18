@@ -16,8 +16,7 @@ class RNN(tnn.Module):
     and an output linear layer back to the size of the vocabulary
     """
 
-    def __init__(self, voc_size, layer_size=512, num_layers=3, cell_type='gru', embedding_layer_size=256,
-                 dropout=0.):
+    def __init__(self, voc_size, layer_size, num_layers, cell_type, embedding_layer_size, dropout):
         """
         Implements a N layer GRU|LSTM cell including an embedding layer and an output linear layer
         back to the size of the vocabulary.

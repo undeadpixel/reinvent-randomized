@@ -27,16 +27,19 @@ import utils.torch as ut
 
 class TrainModelPostEpochHook(ma.TrainModelPostEpochHook):
 
+    WRITER_CACHE_EPOCHS = 25
+
     def __init__(self, output_prefix_path, epochs, validation_sets, lr_scheduler, log_path, collect_stats_params,
                  lr_params, collect_stats_frequency, save_frequency, logger=None):
         ma.TrainModelPostEpochHook.__init__(self, logger)
 
-        self.validation_sets = it.cycle(validation_sets)
+        self.validation_sets = validation_sets
         self.lr_scheduler = lr_scheduler
 
         self.output_prefix_path = output_prefix_path
         self.save_frequency = save_frequency
         self.epochs = epochs
+        self.log_path = log_path
 
         self.collect_stats_params = collect_stats_params
         self.collect_stats_frequency = collect_stats_frequency
@@ -46,11 +49,10 @@ class TrainModelPostEpochHook(ma.TrainModelPostEpochHook):
         self._metric_epochs = []
         self._writer = None
         if self.collect_stats_frequency > 0:
-            self._writer = tbx.SummaryWriter(logdir=log_path)
+            self._reset_writer()
 
     def __del__(self):
-        if self._writer:
-            self._writer.close()
+        self._close_writer()
 
     def run(self, model, training_set, epoch):
         if self.collect_stats_frequency > 0 and epoch % self.collect_stats_frequency == 0:
@@ -76,6 +78,9 @@ class TrainModelPostEpochHook(ma.TrainModelPostEpochHook):
                 or (self.save_frequency > 0 and (epoch % self.save_frequency == 0)):
             model.save(self._model_path(epoch))
 
+        if self._writer and (epoch % self.WRITER_CACHE_EPOCHS == 0):
+            self._reset_writer()
+
         return not lr_reached_min
 
     def get_lr(self):
@@ -83,6 +88,14 @@ class TrainModelPostEpochHook(ma.TrainModelPostEpochHook):
 
     def _model_path(self, epoch):
         return "{}.{}".format(self.output_prefix_path, epoch)
+
+    def _reset_writer(self):
+        self._close_writer()
+        self._writer = tbx.SummaryWriter(logdir=self.log_path)
+
+    def _close_writer(self):
+        if self._writer:
+            self._writer.close()
 
 
 def main():
@@ -131,7 +144,7 @@ def load_sets(set_path):
     if os.path.isdir(set_path):
         file_paths = sorted(glob.glob("{}/*.smi".format(set_path)))
 
-    for path in file_paths:
+    for path in it.cycle(file_paths):  # stores the path instead of the set
         yield list(uc.read_smi_file(path))
 
 

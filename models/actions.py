@@ -1,6 +1,5 @@
 import random
 import math
-import itertools as it
 
 import numpy as np
 import scipy.stats as sps
@@ -64,7 +63,8 @@ class TrainModel(Action):
         Initializes the training of an epoch.
         : param model: A model instance, not loaded in sampling mode.
         : param optimizer: The optimizer instance already initialized on the model.
-        : param training_set: A list with the training set SMILES.
+        : param training_set: A list with the training set SMILES, either cycled using \
+            itertools.cycle or as many as epochs needed to train.
         : param batch_size: Batch size to use.
         : param clip_gradient: Clip the gradients after each backpropagation.
         : return:
@@ -73,10 +73,10 @@ class TrainModel(Action):
 
         self.model = model
         self.optimizer = optimizer
-        self.training_sets = training_sets
-        self.batch_size = batch_size
         self.epochs = epochs
         self.clip_gradient = clip_gradient
+        self.batch_size = batch_size
+        self.training_sets = training_sets
 
         if not post_epoch_hook:
             self.post_epoch_hook = TrainModelPostEpochHook(logger=self.logger)
@@ -89,7 +89,7 @@ class TrainModel(Action):
         :return: An iterator of (total_batches, epoch_iterator), where the epoch iterator
                   returns the loss function at each batch in the epoch.
         """
-        for epoch, training_set in zip(range(1, self.epochs + 1), it.cycle(self.training_sets)):
+        for epoch, training_set in zip(range(1, self.epochs + 1), self.training_sets):
             dataloader = self._initialize_dataloader(training_set)
             epoch_iterator = self._epoch_iterator(dataloader)
             yield len(dataloader), epoch_iterator
