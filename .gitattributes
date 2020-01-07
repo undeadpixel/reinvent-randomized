@@ -1,8 +1,0 @@
-trained_models/model.gdb13.1M.canonical filter=lfs diff=lfs merge=lfs -text
-trained_models/model.gdb13.1M.random filter=lfs diff=lfs merge=lfs -text
-trained_models/model.chembl.canonical filter=lfs diff=lfs merge=lfs -text
-trained_models/model.chembl.random filter=lfs diff=lfs merge=lfs -text
-training_sets/gdb13.1M.validation.smi filter=lfs diff=lfs merge=lfs -text
-training_sets/chembl.training.smi filter=lfs diff=lfs merge=lfs -text
-training_sets/chembl.validation.smi filter=lfs diff=lfs merge=lfs -text
-training_sets/gdb13.1M.training.smi filter=lfs diff=lfs merge=lfs -text
