@@ -2,7 +2,8 @@ Implementation of the molecular generative model using randomized SMILES strings
 ==============================================================================
 
 >
-> **Note 1:** The version published alongside [Randomized SMILES strings improve the quality of molecular generative models](https://chemrxiv.org/articles/Randomized_SMILES_Strings_Improve_the_Quality_of_Molecular_Generative_Models/8639942) is available in the separate branch [randomized_smiles](https://github.com/undeadpixel/reinvent-randomized/tree/randomized_smiles).
+> **Note 1:** The version published alongside [Randomized SMILES strings improve the quality of molecular generative models](https://jcheminf.biomedcentral.com/articles/10.1186/s13321-019-0393-0) is available in the separate branch [randomized_smiles](https://github.com/undeadpixel/reinvent-randomized/tree/randomized_smiles).
+>
 > **Note 2:** This repository supersedes [undeadpixel/reinvent-gdb13](https://github.com/undeadpixel/reinvent-gdb13).
 >
 
