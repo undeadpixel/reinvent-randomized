@@ -11,7 +11,6 @@ import models.model as mm
 import models.actions as ma
 
 import utils.log as ul
-import utils.torch as ut
 import utils.chem as uc
 
 
@@ -36,8 +35,6 @@ def parse_args():
 def main():
     """Main function."""
     args = parse_args()
-
-    ut.set_default_device("cuda")
 
     model = mm.Model.load_from_file(args.model_path, mode="sampling")
 

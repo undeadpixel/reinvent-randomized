@@ -13,7 +13,7 @@ import itertools as it
 import numpy as np
 
 import torch
-import tensorboardX as tbx
+import torch.utils.tensorboard as tbx
 
 import collect_stats_from_model as csfm
 
@@ -22,7 +22,6 @@ import models.actions as ma
 
 import utils.chem as uc
 import utils.log as ul
-import utils.torch as ut
 
 
 class TrainModelPostEpochHook(ma.TrainModelPostEpochHook):
@@ -91,7 +90,7 @@ class TrainModelPostEpochHook(ma.TrainModelPostEpochHook):
 
     def _reset_writer(self):
         self._close_writer()
-        self._writer = tbx.SummaryWriter(logdir=self.log_path)
+        self._writer = tbx.SummaryWriter(log_dir=self.log_path)
 
     def _close_writer(self):
         if self._writer:
@@ -104,8 +103,6 @@ def main():
     lr_params = params["learning_rate"]
     cs_params = params["collect_stats"]
     params = params["other"]
-
-    ut.set_default_device("cuda")
 
     if params["collect_stats_frequency"] != 1 and lr_params["mode"] == "ada":
         LOG.warning("Changed collect-stats-frequency to 1 to work well with adaptative training.")
@@ -182,7 +179,7 @@ def _add_lr_args(parser):
                         help="Select the mode that the learning rate will be changed (exp, ada) [DEFAULT: exp]",
                         type=str, default="exp")
     parser.add_argument("--learning-rate-start", "--lrs",
-                        help="Starting learning rate for training [DEFAULT: 5E-4]", type=float, default=5E-4)
+                        help="Starting learning rate for training [DEFAULT: 1E-4]", type=float, default=1E-4)
     parser.add_argument("--learning-rate-min", "--lrmin",
                         help="Minimum learning rate, when reached the training stops. [DEFAULT: 1E-5]",
                         type=float, default=1E-5)
@@ -196,7 +193,7 @@ def _add_lr_args(parser):
                             [DEFAULT: 1E-4]",
                         type=float, default=1E-4)
     parser.add_argument("--learning-rate-average-steps", "--lras",
-                        help="Number of previous steps used to calculate the average [DEFAULT: 4]", type=int, default=4)
+                        help="Number of previous steps used to calculate the average [DEFAULT: 1]", type=int, default=1)
     parser.add_argument("--learning-rate-patience", "--lrp",
                         help="Minimum number of steps without change before the learning rate is lowered [DEFAULT: 8]",
                         type=int, default=8)

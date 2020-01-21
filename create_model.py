@@ -26,7 +26,6 @@ def parse_args():
                         help="Number of RNN layers of the model [DEFAULT: 3]", type=int, default=3)
     parser.add_argument("--layer-size", "-s",
                         help="Size of each of the RNN layers [DEFAULT: 512]", type=int, default=512)
-    parser.add_argument("--cell-type", "-c", help="Type of cell used in RNN [DEFAULT: lstm]", type=str, default="lstm")
     parser.add_argument("--embedding-layer-size", "-e",
                         help="Size of the embedding layer [DEFAULT: 256]", type=int, default=256)
     parser.add_argument("--dropout", "-d",
@@ -53,10 +52,10 @@ def main():
     LOG.info("Vocabulary contains %d tokens: %s", len(tokens), tokens)
     network_params = {
         'num_layers': args.num_layers,
-        'layer_size': args.layer_size,
-        'cell_type': args.cell_type,
+        'num_dimensions': args.layer_size,
         'embedding_layer_size': args.embedding_layer_size,
-        'dropout': args.dropout
+        'dropout': args.dropout,
+        'vocabulary_size': len(vocabulary)
     }
     model = mm.Model(no_cuda=True, vocabulary=vocabulary, tokenizer=tokenizer,
                      network_params=network_params, max_sequence_length=args.max_sequence_length)

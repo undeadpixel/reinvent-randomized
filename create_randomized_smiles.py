@@ -18,6 +18,8 @@ def parse_args():
                         help="Path to a folder that will have the converted SMILES files.", type=str, required=True)
     parser.add_argument("--random-type", "-r", help="Type of the converted SMILES TYPES=(restricted,unrestricted) \
         [DEFAULT: restricted].", type=str, default="restricted")
+    parser.add_argument("--smiles-type", "-s", help="Type of SMILES strings TYPES=(smiles,deepsmiles.*,scaffold) \
+        [DEFAULT: smiles].", type=str, default="restricted")
     parser.add_argument(
         "--num-files", "-n", help="Number of SMILES files to create (numbered from 000 ...) [DEFAULT: 1]",
         type=int, default=1)
@@ -31,20 +33,20 @@ def main():
     """Main function."""
     args = parse_args()
 
+    randomize_func = functools.partial(uc.randomize_smiles, random_type=args.random_type)
+    to_mol_func = uc.get_mol_func(args.smiles_type)
+    to_smiles_func = uc.get_smi_func(args.smiles_type)
     mols_rdd = SC.textFile(args.input_smi_path) \
         .repartition(args.num_partitions) \
-        .map(uc.to_mol)\
+        .map(to_mol_func)\
         .persist()
 
     os.makedirs(args.output_smi_folder_path, exist_ok=True)
 
-    smiles_func = functools.partial(uc.randomize_smiles, random_type=args.random_type)
     for i in range(args.num_files):
         with open("{}/{:03d}.smi".format(args.output_smi_folder_path, i), "w+") as out_file:
-            for smi in mols_rdd.map(smiles_func).collect():
+            for smi in mols_rdd.map(lambda mol: to_smiles_func(randomize_func(mol))).collect():
                 out_file.write("{}\n".format(smi))
-
-    mols_rdd.unpersist()
 
 
 LOG = ul.get_logger("create_randomized_smiles")

@@ -97,9 +97,13 @@ class Vocabulary:
         :return : An numpy array with the tokens encoded.
         """
         ohe_vect = np.zeros(len(tokens), dtype=np.float32)
-        for i, token in enumerate(tokens):
-            ohe_vect[i] = self._tokens[token]
-        return ohe_vect
+        try:
+            for i, token in enumerate(tokens):
+                ohe_vect[i] = self._tokens[token]
+        except KeyError:
+            return None
+        else:
+            return ohe_vect
 
     def decode(self, ohe_vect):
         """
@@ -189,5 +193,5 @@ def create_vocabulary(smiles_list, tokenizer):
         tokens.update(tokenizer.tokenize(smi, with_begin_and_end=False))
 
     vocabulary = Vocabulary()
-    vocabulary.update(["$", "^"] + sorted(tokens))  # end token is 0 (also counts as padding)
+    vocabulary.update(["<pad>", "$", "^"] + sorted(tokens))
     return vocabulary

@@ -6,6 +6,7 @@ Implementation of the RNN model
 
 import torch
 import torch.nn as tnn
+import torch.nn.utils.rnn as tnnur
 
 import models.vocabulary as mv
 
@@ -16,12 +17,12 @@ class RNN(tnn.Module):
     and an output linear layer back to the size of the vocabulary
     """
 
-    def __init__(self, voc_size, layer_size, num_layers, cell_type, embedding_layer_size, dropout):
+    def __init__(self, vocabulary_size, num_dimensions, num_layers, embedding_layer_size, dropout):
         """
         Implements a N layer GRU|LSTM cell including an embedding layer and an output linear layer
         back to the size of the vocabulary.
         :param voc_size: Size of the vocabulary.
-        :param layer_size: Size of each of the RNN layers.
+        :param num_dimensions: Size of each of the RNN layers.
         :param num_layers: Number of RNN layers.
         :param cell_type: Cell type to use (GRU or LSTM).
         :param embedding_layer_size: Size of the embedding layer.
@@ -30,45 +31,42 @@ class RNN(tnn.Module):
         """
         super(RNN, self).__init__()
 
-        self.layer_size = layer_size
+        self.num_dimensions = num_dimensions
         self.embedding_layer_size = embedding_layer_size
         self.num_layers = num_layers
-        self.cell_type = cell_type.lower()
         self.dropout = dropout
+        self.vocabulary_size = vocabulary_size
 
-        self._embedding = tnn.Embedding(voc_size, self.embedding_layer_size)
-        if self.cell_type == 'gru':
-            self._rnn = tnn.GRU(self.embedding_layer_size, self.layer_size, num_layers=self.num_layers,
-                                dropout=self.dropout, batch_first=True)
-        elif self.cell_type == 'lstm':
-            self._rnn = tnn.LSTM(self.embedding_layer_size, self.layer_size, num_layers=self.num_layers,
-                                 dropout=self.dropout, batch_first=True)
-        else:
-            raise ValueError('Value of the parameter cell_type should be "gru" or "lstm"')
-        self._linear = tnn.Linear(self.layer_size, voc_size)
+        self._embedding = tnn.Sequential(
+            tnn.Embedding(self.vocabulary_size, self.embedding_layer_size),
+            tnn.Dropout(self.dropout)
+        )
+        self._rnn = tnn.LSTM(self.embedding_layer_size, self.num_dimensions,
+                             num_layers=self.num_layers, dropout=self.dropout, batch_first=True)
+        self._linear = tnn.Linear(self.num_dimensions, self.vocabulary_size)
 
-    def forward(self, input_vector, hidden_state=None):  # pylint: disable=W0221
+    def forward(self, padded_seqs, seq_lengths, hidden_state=None):  # pylint: disable=W0221
         """
         Performs a forward pass on the model. Note: you pass the **whole** sequence.
-        :param input_vector: Input tensor (batch_size, seq_size).
+        :param padded_seqs: Padded input tensor (batch_size, seq_size).
+        :param seq_lengths: Length of each sequence in the batch.
         :param hidden_state: Hidden state tensor.
         :return: A tuple with the output state and the output hidden state.
         """
-        batch_size, seq_size = input_vector.size()
+        batch_size = padded_seqs.size(0)
         if hidden_state is None:
-            size = (self.num_layers, batch_size, self.layer_size)
-            if self.cell_type == "gru":
-                hidden_state = torch.zeros(*size)
-            else:
-                hidden_state = [torch.zeros(*size), torch.zeros(*size)]
-        embedded_data = self._embedding(input_vector)  # (batch,seq,embedding)
-        output_vector, hidden_state_out = self._rnn(embedded_data, hidden_state)
+            size = (self.num_layers, batch_size, self.num_dimensions)
+            hidden_state = [torch.zeros(*size).cuda(), torch.zeros(*size).cuda()]
 
-        output_vector = output_vector.reshape(-1, self.layer_size)
+        padded_encoded_seqs = self._embedding(padded_seqs)  # (batch,seq,embedding)
+        packed_encoded_seqs = tnnur.pack_padded_sequence(
+            padded_encoded_seqs, seq_lengths, batch_first=True, enforce_sorted=False)
+        packed_encoded_seqs, hidden_state = self._rnn(packed_encoded_seqs, hidden_state)
+        padded_encoded_seqs, _ = tnnur.pad_packed_sequence(packed_encoded_seqs, batch_first=True)
 
-        output_data = self._linear(output_vector).view(batch_size, seq_size, -1)
-
-        return output_data, hidden_state_out
+        mask = (padded_encoded_seqs[:, :, 0] != 0).unsqueeze(dim=-1).type(torch.float)
+        logits = self._linear(padded_encoded_seqs)*mask
+        return (logits, hidden_state)
 
     def get_params(self):
         """
@@ -77,10 +75,10 @@ class RNN(tnn.Module):
         """
         return {
             'dropout': self.dropout,
-            'layer_size': self.layer_size,
+            'num_dimensions': self.num_dimensions,
             'num_layers': self.num_layers,
-            'cell_type': self.cell_type,
-            'embedding_layer_size': self.embedding_layer_size
+            'embedding_layer_size': self.embedding_layer_size,
+            'vocabulary_size': self.vocabulary_size
         }
 
 
@@ -107,11 +105,11 @@ class Model:
         if not isinstance(network_params, dict):
             network_params = {}
 
-        self.network = RNN(len(self.vocabulary), **network_params)
+        self.network = RNN(**network_params)
         if torch.cuda.is_available() and not no_cuda:
             self.network.cuda()
 
-        self.nll_loss = tnn.NLLLoss(reduction="none")
+        self.nll_loss = tnn.NLLLoss(reduction="none", ignore_index=0)
 
         self.set_mode(mode)
 
@@ -165,15 +163,16 @@ class Model:
         }
         torch.save(save_dict, path)
 
-    def likelihood(self, sequences):
+    def likelihood(self, padded_seqs, seq_lengths):
         """
         Retrieves the likelihood of a given sequence. Used in training.
-        :param sequences: (batch_size, sequence_length) A batch of sequences
+        :param padded_seqs: (batch_size, sequence_length) A batch of padded sequences.
+        :param seq_lengths: Length of each sequence in a tensor.
         :return:  (batch_size) Log likelihood for each example.
         """
-        logits, _ = self.network(sequences[:, :-1])  # all steps done at once
-        log_probs = logits.log_softmax(dim=2)
-        return self.nll_loss(log_probs.transpose(1, 2), sequences[:, 1:]).sum(dim=1)
+        logits, _ = self.network(padded_seqs, seq_lengths - 1)
+        log_probs = logits.log_softmax(dim=2).transpose(1, 2)
+        return self.nll_loss(log_probs, padded_seqs[:, 1:]).sum(dim=1)
 
     @torch.no_grad()
     def sample_smiles(self, num):
@@ -182,26 +181,24 @@ class Model:
         :param num: Number of SMILES to sample.
         :return: An iterator with (smiles, likelihood) pairs
         """
-        start_token = torch.zeros(num, dtype=torch.long)
-        start_token[:] = self.vocabulary["^"]
-        input_vector = start_token
+        input_vector = torch.full((num, 1), self.vocabulary["^"], dtype=torch.long).cuda()  # (batch, 1)
+        seq_lengths = torch.ones(num).cuda()  # (batch)
         sequences = []
-
         hidden_state = None
-        nlls = torch.zeros(num)
+        nlls = torch.zeros(num).cuda()
+        not_finished = torch.ones(num, 1, dtype=torch.long).cuda()
         for _ in range(self.max_sequence_length - 1):
-            logits, hidden_state = self.network(input_vector.unsqueeze(1), hidden_state)
-            logits = logits.squeeze(1)
-            probabilities = logits.softmax(dim=1)
-            log_probs = logits.log_softmax(dim=1)
-
-            input_vector = torch.multinomial(probabilities, 1).view(-1)
-            sequences.append(input_vector.view(-1, 1))
-            nlls += self.nll_loss(log_probs, input_vector)
-            if input_vector.sum() == 0:
+            logits, hidden_state = self.network(input_vector, seq_lengths, hidden_state)  # (batch, 1, voc)
+            probs = logits.softmax(dim=2).squeeze()  # (batch, voc)
+            log_probs = logits.log_softmax(dim=2).squeeze()
+            input_vector = torch.multinomial(probs, 1)*not_finished  # (batch, 1)
+            sequences.append(input_vector)
+            nlls += self.nll_loss(log_probs, input_vector.squeeze())
+            not_finished = (input_vector > 1).type(torch.long)
+            if not_finished.sum() == 0:
                 break
 
-        sequences = torch.cat(sequences, 1)
+        smiles = [self.tokenizer.untokenize(self.vocabulary.decode(seq))
+                  for seq in torch.cat(sequences, 1).data.cpu().numpy()]
         nlls = nlls.data.cpu().numpy().tolist()
-        smiles = [self.tokenizer.untokenize(self.vocabulary.decode(seq)) for seq in sequences.data.cpu().numpy()]
         return zip(smiles, nlls)

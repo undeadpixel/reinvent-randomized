@@ -102,8 +102,8 @@ class TrainModel(Action):
                 break
 
     def _epoch_iterator(self, dataloader):
-        for batch in dataloader:
-            loss = self.model.likelihood(batch.long()).mean()
+        for padded_seqs, seq_lengths in dataloader:
+            loss = self.model.likelihood(padded_seqs, seq_lengths).mean()
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -224,6 +224,8 @@ class CollectStatsFromModel(Action):
         })
 
         def jsd(dists):
+            min_size = min(len(dist) for dist in dists)
+            dists = [dist[:min_size] for dist in dists]
             num_dists = len(dists)
             avg_dist = np.sum(dists, axis=0) / num_dists
             return np.sum([sps.entropy(dist, avg_dist) for dist in dists]) / num_dists
@@ -302,5 +304,5 @@ class CalculateNLLsFromModel(Action):
         dataloader = tud.DataLoader(dataset, batch_size=self.batch_size, collate_fn=md.Dataset.collate_fn,
                                     shuffle=False)
         for batch in dataloader:
-            for nll in self.model.likelihood(batch.long()).data.cpu().numpy():
+            for nll in self.model.likelihood(*batch).data.cpu().numpy():
                 yield nll

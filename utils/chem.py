@@ -3,6 +3,8 @@ RDKit util functions.
 """
 import random
 import gzip
+import re
+import functools
 
 import rdkit.Chem as rkc
 import deepsmiles as ds
@@ -98,7 +100,7 @@ def randomize_smiles(mol, random_type="restricted"):
     if random_type == "unrestricted":
         return rkc.MolToSmiles(mol, canonical=False, doRandom=True, isomericSmiles=False)
     if random_type == "restricted":
-        new_atom_order = list(range(mol.GetNumHeavyAtoms()))
+        new_atom_order = list(range(mol.GetNumAtoms()))
         random.shuffle(new_atom_order)
         random_mol = rkc.RenumberAtoms(mol, newOrder=new_atom_order)
         return rkc.MolToSmiles(random_mol, canonical=False, isomericSmiles=False)
@@ -136,7 +138,7 @@ def from_deepsmiles(deepsmi, converter="both"):
 def get_mol_func(smiles_type):
     """
     Returns a function pointer that converts a given SMILES type to a mol object.
-    :param smiles_type: The SMILES type to convert VALUES=(deepsmiles.*, smiles).
+    :param smiles_type: The SMILES type to convert VALUES=(deepsmiles.*, smiles, scaffold).
     :return : A function pointer.
     """
 
@@ -145,3 +147,31 @@ def get_mol_func(smiles_type):
         return lambda deepsmi: to_mol(from_deepsmiles(deepsmi, converter=deepsmiles_type))
     else:
         return to_mol
+
+
+def get_smi_func(smiles_type):
+    """
+    Returns a function pointer that converts a given SMILES string to SMILES of the given type.
+    :param smiles_type: The SMILES type to convert VALUES=(deepsmiles.*, smiles, scaffold).
+    :return : A function pointer.
+    """
+    if smiles_type.startswith("deepsmiles"):
+        _, deepsmiles_type = smiles_type.split(".")
+        return functools.partial(to_deepsmiles, converter=deepsmiles_type)
+    elif smiles_type == "scaffold":
+        return add_brackets_to_attachment_points
+    else:
+        return lambda x: x
+
+
+ATTACHMENT_POINT_TOKEN = "*"
+ATTACHMENT_POINT_NO_BRACKETS_REGEXP = r"(?<!\[){}".format(re.escape(ATTACHMENT_POINT_TOKEN))
+
+
+def add_brackets_to_attachment_points(smi):
+    """
+    Adds brackets to the attachment points (if they don't have them).
+    :param smi: SMILES string.
+    :return: A SMILES string with attachments with brackets.
+    """
+    return re.sub(ATTACHMENT_POINT_NO_BRACKETS_REGEXP, "[{}]".format(ATTACHMENT_POINT_TOKEN), smi)

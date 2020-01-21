@@ -1,13 +1,17 @@
-Implementation of the molecular generative model used in "Randomized SMILES strings improve the quality of molecular generative models"
-=======================================================================================================================================
+Implementation of the molecular generative model using randomized SMILES strings
+==============================================================================
 
-This repository holds the code to create, train and sample models akin to those described in [Randomized SMILES strings improve the quality of molecular generative models](https://chemrxiv.org/articles/Randomized_SMILES_Strings_Improve_the_Quality_of_Molecular_Generative_Models/8639942). Specifically, it includes the following:
+>
+> **Note 1:** The version published alongside [Randomized SMILES strings improve the quality of molecular generative models](https://chemrxiv.org/articles/Randomized_SMILES_Strings_Improve_the_Quality_of_Molecular_Generative_Models/8639942) is available in the separate branch [randomized_smiles](https://github.com/undeadpixel/reinvent-randomized/tree/randomized_smiles).
+> **Note 2:** This repository supersedes [undeadpixel/reinvent-gdb13](https://github.com/undeadpixel/reinvent-gdb13).
+>
+
+This repository holds the code to create, train and sample models akin to those described in [Randomized SMILES strings improve the quality of molecular generative models](https://chemrxiv.org/articles/Randomized_SMILES_Strings_Improve_the_Quality_of_Molecular_Generative_Models/8639942) and [SMILES-based deep generative scaffold decorator for de-novo drug design](). This version changes the implementation of the model to use packed sequences and several speed improvements. Also, the support for GRU cells has been dropped.
+
+Specifically, it includes the following:
 
 * Python files in the main folder: Scripts to create, train, sample and calculate NLLs of models.
-* `./training_sets`: Training sets (in canonical SMILES) used in the benchmark.
-* `./trained_models`: Best trained models in the benchmark.
-
-**Note:** This repository supersedes [undeadpixel/reinvent-gdb13](https://github.com/undeadpixel/reinvent-gdb13).
+* `./training_sets`: Training set files (in canonical SMILES).
 
 Requirements
 ------------
@@ -66,12 +70,12 @@ Create, train 100 epochs with exponential learning rate and sample a model with 
 (reinvent-randomized) $> mkdir -p gdb13_exp/models
 (reinvent-randomized) $> ./create_model.py -i training_sets/gdb13.1M.training.smi -o gdb13_exp/models/model.empty
 (reinvent-randomized) $> ./train_model.py -i gdb13_exp/models/model.empty -o gdb13_exp/models/model.trained -s training_sets/gdb13.1M.training.smi -e 100 --lrm exp --lrg 0.9 --csl gdb13_exp/tensorboard --csv trained_models/gdb13.1M.validation.smi --csn 10000
-# (... wait for a day or so ...)
+# (... wait for some hours ...)
 (reinvent-randomized) $> ./sample_from_model.py -m gdb13_exp/models/model.trained.100 --with-likelihood
 ~~~~
 
 Bugs, Errors, Improvements, etc...
 ----------------------------------
 
-We have tested the software, but if you find any bug (which there probably are some) don't hesitate to contact us, or even better, send a pull request or open a github issue. If you have any other question, you can contact us at josep.arus@dcb.unibe.ch and we will be happy to answer you :).
+We have tested the software, but if you find any bug (which there probably are some) don't hesitate to contact us, or even better, send a pull request or open a github issue. If you have any other question, you can contact us at josep.arus@dcb.unibe.ch and we will be happy to answer you :smile:.
 

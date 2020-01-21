@@ -7,13 +7,12 @@ Collects stats for an existing RNN model.
 
 import argparse
 
-import tensorboardX as tbx
+import torch.utils.tensorboard as tbx
 
 import models.model as mm
 import models.actions as ma
 import utils.log as ul
 import utils.chem as uc
-import utils.torch as ut
 
 
 def parse_args():
@@ -71,16 +70,15 @@ def main():
     """Main function."""
     args = parse_args()
 
-    ut.set_default_device("cuda")
-
     model = mm.Model.load_from_file(args.model_path, mode="sampling")
     training_set = list(uc.read_smi_file(args.training_set_path))
     validation_set = list(uc.read_smi_file(args.validation_set_path))
 
-    writer = tbx.SummaryWriter(logdir=args.log_path)
+    writer = tbx.SummaryWriter(log_dir=args.log_path)
 
-    ma.CollectStatsFromModel(model, args.epoch, training_set, validation_set, writer, sample_size=args.sample_size,
-                             with_weights=args.with_weights, to_mol_func=uc.get_mol_func(args.smiles_type), logger=LOG).run()
+    ma.CollectStatsFromModel(model, args.epoch, training_set, validation_set, writer,
+                             sample_size=args.sample_size, with_weights=args.with_weights,
+                             to_mol_func=uc.get_mol_func(args.smiles_type), logger=LOG).run()
 
     writer.close()
 

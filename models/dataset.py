@@ -6,10 +6,11 @@ Implementation of a SMILES dataset.
 
 import torch
 import torch.utils.data as tud
+import torch.nn.utils.rnn as tnnur
 
 
 class Dataset(tud.Dataset):
-    """Custom PyTorch Dataset."""
+    """Dataset that takes a list of SMILES only."""
 
     def __init__(self, smiles_list, vocabulary, tokenizer):
         """
@@ -21,26 +22,29 @@ class Dataset(tud.Dataset):
         """
         self._vocabulary = vocabulary
         self._tokenizer = tokenizer
-        self._smiles_list = list(smiles_list)
+
+        self._encoded_list = []
+        for smi in smiles_list:
+            enc = self._vocabulary.encode(self._tokenizer.tokenize(smi))
+            if enc is not None:
+                self._encoded_list.append(enc)
 
     def __getitem__(self, i):
-        smi = self._smiles_list[i]
-        tokens = self._tokenizer.tokenize(smi)
-        encoded = self._vocabulary.encode(tokens)
-        return torch.tensor(encoded, dtype=torch.long)  # pylint: disable=E1102
+        return torch.tensor(self._encoded_list[i], dtype=torch.long)  # pylint: disable=E1102
 
     def __len__(self):
-        return len(self._smiles_list)
+        return len(self._encoded_list)
 
     @classmethod
     def collate_fn(cls, encoded_seqs):
-        """
-        Takes a list of encoded sequences and turns them into a batch.
-        :param encoded_seqs: A list of sequences in one-hot encoded version.
-        :return: A pytorch Tensor with the data correctly padded.
-        """
-        max_length = max([seq.size(0) for seq in encoded_seqs])
-        collated_arr = torch.zeros(len(encoded_seqs), max_length, dtype=torch.long)  # padded with zeroes
-        for i, seq in enumerate(encoded_seqs):
-            collated_arr[i, :seq.size(0)] = seq
-        return collated_arr
+        return pad_batch(encoded_seqs)
+
+
+def pad_batch(encoded_seqs):
+    """
+    Pads a batch.
+    :param encoded_seqs: A list of encoded sequences.
+    :return: A tensor with the sequences correctly padded.
+    """
+    seq_lengths = torch.tensor([len(seq) for seq in encoded_seqs], dtype=torch.int64)  # pylint: disable=not-callable
+    return (tnnur.pad_sequence(encoded_seqs, batch_first=True).cuda(), seq_lengths)

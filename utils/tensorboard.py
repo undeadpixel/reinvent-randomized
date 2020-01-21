@@ -3,7 +3,7 @@ TensorboardX helper functions for molecules and other stuff.
 """
 import io
 
-import tensorboardX.summary as tbxs
+import torch.utils.tensorboard.summary as tbxs
 
 import rdkit.Chem.Draw as rkcd
 
@@ -36,6 +36,7 @@ def add_image(writer, tag, image, global_step=None, walltime=None):
     image_string = output.getvalue()
     output.close()
 
-    summary_image = tbxs.Summary.Image(height=height, width=width, colorspace=channel, encoded_image_string=image_string)
+    summary_image = tbxs.Summary.Image(height=height, width=width, colorspace=channel,
+                                       encoded_image_string=image_string)
     summary = tbxs.Summary(value=[tbxs.Summary.Value(tag=tag, image=summary_image)])
     writer.file_writer.add_summary(summary, global_step, walltime)
