@@ -1,7 +1,7 @@
 Implementation of the molecular generative model used in "Randomized SMILES strings improve the quality of molecular generative models"
 =======================================================================================================================================
 
-This repository holds the code to create, train and sample models akin to those described in [Randomized SMILES strings improve the quality of molecular generative models](https://chemrxiv.org/articles/Randomized_SMILES_Strings_Improve_the_Quality_of_Molecular_Generative_Models/8639942). Specifically, it includes the following:
+This repository holds the code to create, train and sample models akin to those described in [Randomized SMILES strings improve the quality of molecular generative models](https://jcheminf.biomedcentral.com/articles/10.1186/s13321-019-0393-0). Specifically, it includes the following:
 
 * Python files in the main folder: Scripts to create, train, sample and calculate NLLs of models.
 * `./training_sets`: Training sets (in canonical SMILES) used in the benchmark.
